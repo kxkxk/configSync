@@ -1,7 +1,9 @@
 backend = "etcdv3"
 nodes = [
-  "http://127.0.0.1:2379",
+  "10.50.7.24:2379",
 ]
 configs = [
-    "/etc/syncConfig/"
+    "D:\\PROJECTS\\configSync\\templates\\config.toml"
 ]
+public_prifix = "/config/public/"
+private_prifix = "/config/private/"
