@@ -3,12 +3,10 @@ from util import *
 from watch import *
 import time
 
-# 读配置，获取当前需要同步的文件,生成监视对象加入线程池
-# 监视etcd相关key改动，改动version高于当前version时更新并同步配置
-# 分为3种，public改动全部接受，private改动只接受前缀hostname与本机相同的
-# etcd集群配置改动后重启服务
-
-# 监视文件改动，读配置文件,编成列表
+# TODO: 1. 使用命令行更新配置
+#       2. 延迟更新监视的etcd节点
+#       3. 读取失败时不更新文件
+#       4. 加日志
 
 def watch_public(watcher: EtcdWatcher, config: Config, prifix):
     print('now watch: ' + prifix + config.name)
@@ -23,10 +21,15 @@ def watch_private(watcher: EtcdWatcher, config: Config, prifix):
 
 # 创建watch，更新配置
 
+def run_loop(loop):
+    asyncio.set_event_loop(loop)
+    loop.run_until_complete(process_queue())
+
 def main():
     global CONFIGTABLE
     global HOST
-    config_dict = load_config(SELFCONFPATH)
+    global WORKQUEUE
+    config_dict, _ = parse_config(SELFCONFPATH)
     publicPrifix = config_dict['public_prifix']
     privatePrifix = config_dict['private_prifix']
     # 初始化watcher
@@ -37,7 +40,7 @@ def main():
         HOST = get_host()
     # 根据配置文件初始化监听
     for i in config_dict['configs']:
-        tmpDict = load_config(i)
+        tmpDict, _ = parse_config(i)
         # TODO: 检查格式
         if not check_config(tmpDict):
             print('有问题')
@@ -47,8 +50,13 @@ def main():
         tmpConfig = Config(name, src)
         tmpConfig.set_dict(tmpDict)
         CONFIGTABLE[name] = tmpConfig
+        print(tmpConfig)
         watch_public(watcher, tmpConfig, publicPrifix)
         watch_private(watcher, tmpConfig, privatePrifix)
+
+        loop = asyncio.new_event_loop()
+        t = threading.Thread(target=run_loop, args=(loop,))
+        t.start()
     while True:
         time.sleep(1)
         pass
@@ -56,3 +64,5 @@ def main():
 if __name__== "__main__" :
     main()
     # 开一个守护线程，一个修改线程，一个读线程(之后搞cmd用)
+
+# {"etcd/hosts": ["10.0.0.71:7480", "10.0.0.27:7480"], "grpc/port": 50052}

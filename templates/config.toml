@@ -1,5 +1,5 @@
 [basic_settings]
-src = "/etc/lbecm/config.ini"
+src = "D:/PROJECTS/configSync/templates/config.ini"
 name = "lbecm"
 [etcd]
 hosts = "PUBLIC"
